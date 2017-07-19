@@ -100,12 +100,23 @@ kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addo
     kubectl describe deployments nginx
 
 ## Concepts
-#### Kubernetes components
-Kubernetes components consist of:
+#### Kubernetes core components
+Kubernetes core components include:
 
-- apiserver: runs on the masters.  It's what kubectl -- the CLI tool we use to manage a cluster -- talks to.  It talks to kubelets and kube-proxies (?) on minions.
-- kubelet: runs on all nodes.  Schedules pods and checks the health of each container in a pod.  Restarts containers if necessary.
-- TODO
+| module | location | responsibility |
+|--------|----------|----------------|
+| apiserver | masters | handles kubectl requests<br>communicates with node kubelets, kube-scheduler, kube-controller-manager|
+| kubelet | all | **DOES NOT RUN IN A CONTAINER**<br>starts pods in /etc/kubernetes/manifests<br>|registers itself as a node with the API server<br>sets up the Docker cbr0 bridge interface<br>monitors and restarts pods scheduled by the kube-scheduler|
+| kube-proxy | all | forwards ports through iptables |
+| etcd | masters | stores configuration, secrets, and pod manifests for retrieval by the API server |
+| etcd-events | masters | stores k8s cluster event logs |
+| kube-controller-manager | masters | "runs various controllers" |
+| kube-scheduler | masters | schedules pods on nodes |
+| kube-dns | all | sort of like DNSmasq |
+| dns-controller | masters | makes changes to external DNS (e.g. route53) |
+| protokube (kops only) | masters | bootstraps etcd, acts as an installation script / config management system |
+
+*note: I have a shallow understanding of k8s components and I am likely wrong on many counts*
 
 #### Pods
 A pod is the atomic unit managed by k8s.  It is a namespace, with a single IP address, a set of volumes, and one or more containers that share the volumes / IP address.
