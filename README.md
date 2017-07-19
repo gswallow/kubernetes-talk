@@ -1,6 +1,15 @@
 # kubernetes-talk
 Quick talk to the Indy DevOps group about discovery sessions with Kubernetes
 
+## Get started
+
+Check the contents of env.sh.  At a minimum, run:
+
+    export AWS_ACCESS_KEY_ID=<my_AWS_ACCESS_KEY_ID>
+    export AWS_SECRET_ACCESS_KEY=<my_AWS_SECRET_ACCESS_KEY>
+    export org=<arbitrary>
+    source env.sh
+
 ## things
 
     kubectl get nodes
