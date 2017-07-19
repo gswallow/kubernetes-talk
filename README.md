@@ -11,6 +11,10 @@ Check the contents of `env.sh`.  At a minimum, run:
 If you don't have the aws-sdk-core gem installed, install it with bundler:
 
     bundle install
+    
+This repo contains a git submodule (Thanks to Kelsey Hightower!).  Initialize it:
+
+    git submodule update --init
 
 ## Pre-requisites to running your own kubernetes cluster
 We will stand up our own kubernetes cluster using the [kops](https://github.com/kubernetes/kops/)
@@ -96,5 +100,26 @@ kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addo
     kubectl describe deployments nginx
 
 ## Concepts
+#### Kubernetes components
+Kubernetes components consist of:
 
-TODO still learning these myself :)
+- apiserver: runs on the masters.  It's what kubectl -- the CLI tool we use to manage a cluster -- talks to.  It talks to kubelets and kube-proxies (?) on minions.
+- kubelet: runs on all nodes.  Schedules pods and checks the health of each container in a pod.  Restarts containers if necessary.
+- TODO
+
+#### Pods
+A pod is the atomic unit managed by k8s.  It is a namespace, with a single IP address, a set of volumes, and one or more containers that share the volumes / IP address.
+
+#### Secrets
+
+#### Config maps
+
+#### Deployments
+
+#### Services
+
+#### Ingresses(?)
+
+#### Namespaces(??)
+
+#### TODO
