@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script would set up a "vanilla" kubernetes cluster, e.g. it spins up its own VPC from scratch.
+
 export ZONES=$(echo $(aws ec2 describe-availability-zones --query AvailabilityZones[].ZoneName --output text) | tr -s ' ' ',')
 
 export DNS_ZONE=${DNS_ZONE:=k8s.$public_domain}

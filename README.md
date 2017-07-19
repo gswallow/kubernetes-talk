@@ -1,8 +1,8 @@
 # kubernetes-talk
-Quick talk to the Indy DevOps group about discovery sessions with Kubernetes (k8s)
+Quick talk to the Indy DevOps group about my recent discovery sessions with Kubernetes (k8s)
 
 ## Get started
-Check the contents of env.sh.  At a minimum, run:
+Check the contents of `env.sh`.  At a minimum, run:
 
     export AWS_ACCESS_KEY_ID=<my_AWS_ACCESS_KEY_ID>
     export AWS_SECRET_ACCESS_KEY=<my_AWS_SECRET_ACCESS_KEY>
@@ -31,6 +31,30 @@ Once the VPC gets spun up (about three minutes), link your two zones together wi
 
     cd cloudformation && bundle exec ./create-ns-records.rb
 
+### Let's get sidetracked: minikube
+
+Rather than crack jokes through what would be three awkward minutes of silence, let's spin up a local kubernetes cluster using [minikube](https://kubernetes.io/docs/getting-started-guides/minikube/).
+
+    curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.20.0/minikube-darwin-amd64 \
+     && chmod +x minikube && sudo mv minikube /usr/local/bin/
+    minikube start --vm-driver=virtualbox
+    kubectl run hello-minikube --image=gcr.io/google_containers/echoserver:1.4 --port=8080
+    kubectl expose deployment hello-minikube --type=NodePort
+    minikube service hello-minikube --url
+    curl $(minikube service hello-minikube --url)
+
+Then let's tear it down:
+
+    minikube stop
+    # for fun here, you could restart it but meh
+    minikube delete
+
+#### Contexts
+
+Switch between k8s clusters by using the `kubectl config use-context` command: 
+
+    kubectl config use-context k8s.gregonaws.net
+    
 ## Launching a cluster
 
 There are two []network topologies](https://github.com/kubernetes/kops/blob/master/docs/topology.md): public and private.  We will launch a private kubernetes cluster, meaning that all of the nodes -- masters and minions -- will be located within private subnets.  This is the most secure way to create your own kubernetes cluster.
@@ -40,13 +64,13 @@ We will demonstrate how to launch a cluster [within our own VPC](https://github.
     cd k8s && eval $(./kcc.sh)
     bundle exec ./get-subnets.rb
 
-Copy the output of get-subnets.rb, and then run:
+Copy the output of `get-subnets.rb`, and then run:
 
     kops edit cluster k8s.gregonaws.net
 
-Replace the contents of the "subnets" key with the output from get-subnets.rb.
+Replace the contents of the "subnets" key with the output from `get-subnets.rb`.
 
-kcc.sh is simply a wrapper around "kops create cluster."  The "kops create cluster" command will lay out a cluster in the S3 bucket; in order to create it, we need to update the cluster:
+`kcc.sh` is simply a wrapper around `kops create cluster`.  The `kops create cluster` command will lay out a cluster in the S3 bucket.  In order to actually create the resources comprising the cluster, we need to run the `kops update cluster` command:
 
     kops update cluster k8s.gregonaws.net --yes
     
@@ -71,3 +95,6 @@ kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addo
     kubectl scale --replicas=3 deployment/nginx
     kubectl describe deployments nginx
 
+## Concepts
+
+TODO still learning these myself :)
