@@ -28,4 +28,5 @@ echo kops create cluster $DNS_ZONE \
  --ssh-public-key $SSH_PUBLIC_KEY \
  --topology private \
  --networking calico \
+ --bastion="true" \
  --api-loadbalancer-type public
