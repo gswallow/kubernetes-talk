@@ -4,9 +4,9 @@ export ZONES=$(echo $(aws ec2 describe-availability-zones --query AvailabilityZo
 
 export DNS_ZONE=${DNS_ZONE:=k8s.$public_domain}
 export NODE_COUNT=${NODE_COUNT:-3}
-export NODE_SIZE=${NODE_SIZE:-c4.xlarge}
+export NODE_SIZE=${NODE_SIZE:-t2.large}
 export NODE_VOLUME_SIZE=${NODE_VOLUME_SIZE:-20}
-export MASTER_SIZE=${MASTER_SIZE:-t2.medium}
+export MASTER_SIZE=${MASTER_SIZE:-t2.small}
 export MASTER_VOLUME_SIZE=${MASTER_VOLUME_SIZE:-20}
 export K8S_VERSION=${K8S_VERSION:=1.6.4}
 export KOPS_STATE_STORE=s3://${org}-${environment}-kops-state-store

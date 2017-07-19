@@ -812,7 +812,7 @@
     "PrivateHostedZoneName": {
       "Type": "String",
       "AllowedPattern": "[\\x20-\\x7E]*",
-      "Default": "demo.greg",
+      "Default": "demo.gregonaws",
       "Description": "A hosted route53 zone",
       "ConstraintDescription": "can only contain ASCII characters"
     },
