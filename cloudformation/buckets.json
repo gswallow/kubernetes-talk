@@ -1,0 +1,284 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Outputs": {
+    "GitRepository": {
+      "Description": "Source code origin",
+      "Value": "git@github.com:indigobio/sparkleformation-indigo-buckets.git"
+    },
+    "GitRevision": {
+      "Description": "Source code revision",
+      "Value": "6f045351020fdd4db02b89b1c03ce6db57ea05de"
+    }
+  },
+  "Description": "Creates S3 buckets to hold data in transit and for administrative services like Chef and AWS Lambda\n",
+  "Parameters": {
+    "LambdaAcl": {
+      "Type": "String",
+      "AllowedValues": [
+        "AuthenticatedRead",
+        "BucketOwnerRead",
+        "BucketOwnerFullControl",
+        "LogDeliveryWrite",
+        "Private",
+        "PublicRead",
+        "PublicReadWrite"
+      ],
+      "Default": "BucketOwnerFullControl",
+      "Description": "Canned ACL to apply to the bucket. http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl"
+    },
+    "KopsAcl": {
+      "Type": "String",
+      "AllowedValues": [
+        "AuthenticatedRead",
+        "BucketOwnerRead",
+        "BucketOwnerFullControl",
+        "LogDeliveryWrite",
+        "Private",
+        "PublicRead",
+        "PublicReadWrite"
+      ],
+      "Default": "BucketOwnerFullControl",
+      "Description": "Canned ACL to apply to the bucket. http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl"
+    }
+  },
+  "Resources": {
+    "LambdaS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": {
+          "Ref": "LambdaAcl"
+        },
+        "BucketName": "gregonaws-demo-lambda",
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "lambda"
+          }
+        ]
+      }
+    },
+    "LambdaS3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "LambdaS3Bucket"
+        },
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Id": "lambdaSyncPolicy",
+          "Statement": [
+            {
+              "Sid": "lambdaSyncBucketAccess",
+              "Action": [
+                "s3:*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  ":",
+                  [
+                    "arn",
+                    "aws",
+                    "s3",
+                    "",
+                    "",
+                    {
+                      "Ref": "LambdaS3Bucket"
+                    }
+                  ]
+                ]
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    ":",
+                    [
+                      "arn",
+                      "aws",
+                      "iam",
+                      "",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "root"
+                    ]
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "lambdaSyncObjectsAccess",
+              "Action": [
+                "s3:*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    {
+                      "Fn::Join": [
+                        ":",
+                        [
+                          "arn",
+                          "aws",
+                          "s3",
+                          "",
+                          "",
+                          {
+                            "Ref": "LambdaS3Bucket"
+                          }
+                        ]
+                      ]
+                    },
+                    "*"
+                  ]
+                ]
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    ":",
+                    [
+                      "arn",
+                      "aws",
+                      "iam",
+                      "",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "KopsS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": {
+          "Ref": "KopsAcl"
+        },
+        "BucketName": "gregonaws-demo-kops-state-store",
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "kops"
+          }
+        ]
+      }
+    },
+    "KopsS3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "KopsS3Bucket"
+        },
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Id": "kopsSyncPolicy",
+          "Statement": [
+            {
+              "Sid": "kopsSyncBucketAccess",
+              "Action": [
+                "s3:*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  ":",
+                  [
+                    "arn",
+                    "aws",
+                    "s3",
+                    "",
+                    "",
+                    {
+                      "Ref": "KopsS3Bucket"
+                    }
+                  ]
+                ]
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    ":",
+                    [
+                      "arn",
+                      "aws",
+                      "iam",
+                      "",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "root"
+                    ]
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "kopsSyncObjectsAccess",
+              "Action": [
+                "s3:*"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    {
+                      "Fn::Join": [
+                        ":",
+                        [
+                          "arn",
+                          "aws",
+                          "s3",
+                          "",
+                          "",
+                          {
+                            "Ref": "KopsS3Bucket"
+                          }
+                        ]
+                      ]
+                    },
+                    "*"
+                  ]
+                ]
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    ":",
+                    [
+                      "arn",
+                      "aws",
+                      "iam",
+                      "",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

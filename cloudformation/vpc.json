@@ -1,0 +1,827 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "DefaultEc2InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+    "DefaultEc2VpcGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": {
+          "Ref": "DefaultEc2InternetGateway"
+        },
+        "VpcId": {
+          "Ref": "Vpc"
+        }
+      }
+    },
+    "DefaultEc2RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        }
+      }
+    },
+    "DefaultEc2Route": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "DefaultEc2InternetGateway"
+        },
+        "RouteTableId": {
+          "Ref": "DefaultEc2RouteTable"
+        }
+      },
+      "DependsOn": "DefaultEc2VpcGatewayAttachment"
+    },
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "0",
+                    "0"
+                  ]
+                ]
+              },
+              "16"
+            ]
+          ]
+        },
+        "EnableDnsSupport": {
+          "Ref": "EnableDnsSupport"
+        },
+        "EnableDnsHostnames": {
+          "Ref": "EnableDnsHostnames"
+        },
+        "InstanceTenancy": {
+          "Ref": "InstanceTenancy"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "VpcName"
+            }
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2aPublicEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2a",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "0",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "public",
+                  "us-east-2a",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "0",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Public"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2aPublicEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2aPublicEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "DefaultEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2aNatEc2EIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "UsEast2aEc2NatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2aPublicEc2Subnet"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "UsEast2aNatEc2EIP",
+            "AllocationId"
+          ]
+        }
+      }
+    },
+    "UsEast2bPublicEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2b",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "16",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "public",
+                  "us-east-2b",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "16",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Public"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2bPublicEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2bPublicEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "DefaultEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2bNatEc2EIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "UsEast2bEc2NatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2bPublicEc2Subnet"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "UsEast2bNatEc2EIP",
+            "AllocationId"
+          ]
+        }
+      }
+    },
+    "UsEast2cPublicEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2c",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "32",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "public",
+                  "us-east-2c",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "32",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Public"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2cPublicEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2cPublicEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "DefaultEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2cNatEc2EIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "UsEast2cEc2NatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2cPublicEc2Subnet"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "UsEast2cNatEc2EIP",
+            "AllocationId"
+          ]
+        }
+      }
+    },
+    "UsEast2aPrivateEc2RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "us_east_2a_private_route_table"
+          }
+        ]
+      }
+    },
+    "UsEast2aPrivateEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2a",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "240",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "private",
+                  "us-east-2a",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "240",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Private"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2aNatEc2Route": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "UsEast2aEc2NatGateway"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2aPrivateEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2aPrivateEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2aPrivateEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2aPrivateEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2bPrivateEc2RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "us_east_2b_private_route_table"
+          }
+        ]
+      }
+    },
+    "UsEast2bPrivateEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2b",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "224",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "private",
+                  "us-east-2b",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "224",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Private"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2bNatEc2Route": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "UsEast2bEc2NatGateway"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2bPrivateEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2bPrivateEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2bPrivateEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2bPrivateEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2cPrivateEc2RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "us_east_2c_private_route_table"
+          }
+        ]
+      }
+    },
+    "UsEast2cPrivateEc2Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "AvailabilityZone": "us-east-2c",
+        "CidrBlock": {
+          "Fn::Join": [
+            "/",
+            [
+              {
+                "Fn::Join": [
+                  ".",
+                  [
+                    "172",
+                    {
+                      "Ref": "CidrPrefix"
+                    },
+                    "208",
+                    "0"
+                  ]
+                ]
+              },
+              "20"
+            ]
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "private",
+                  "us-east-2c",
+                  "172",
+                  {
+                    "Ref": "CidrPrefix"
+                  },
+                  "208",
+                  "0/20"
+                ]
+              ]
+            }
+          },
+          {
+            "Key": "Network",
+            "Value": "Private"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          },
+          {
+            "Key": "KubernetesCluster",
+            "Value": "k8s.gregonaws.net"
+          },
+          {
+            "Key": "kubernetes.io/cluster/k8s.gregonaws.net",
+            "Value": "shared"
+          }
+        ]
+      }
+    },
+    "UsEast2cNatEc2Route": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "UsEast2cEc2NatGateway"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2cPrivateEc2RouteTable"
+        }
+      }
+    },
+    "UsEast2cPrivateEc2SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "UsEast2cPrivateEc2Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "UsEast2cPrivateEc2RouteTable"
+        }
+      }
+    },
+    "PrivateRoute53HostedZone": {
+      "Type": "AWS::Route53::HostedZone",
+      "Properties": {
+        "Name": {
+          "Ref": "PrivateHostedZoneName"
+        },
+        "VPCs": [
+          {
+            "VPCId": {
+              "Ref": "Vpc"
+            },
+            "VPCRegion": {
+              "Ref": "AWS::Region"
+            }
+          }
+        ]
+      }
+    },
+    "K8sRoute53HostedZone": {
+      "Type": "AWS::Route53::HostedZone",
+      "Properties": {
+        "Name": {
+          "Ref": "K8sHostedZoneName"
+        }
+      }
+    },
+    "PrivateEc2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "private security group",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+
+        ],
+        "SecurityGroupEgress": [
+
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "private_sg"
+          },
+          {
+            "Key": "Environment",
+            "Value": "demo"
+          }
+        ]
+      }
+    },
+    "PrivateLocalEc2SecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "PrivateEc2SecurityGroup",
+            "GroupId"
+          ]
+        },
+        "IpProtocol": "-1",
+        "FromPort": "-1",
+        "ToPort": "-1",
+        "GroupId": {
+          "Fn::GetAtt": [
+            "PrivateEc2SecurityGroup",
+            "GroupId"
+          ]
+        }
+      }
+    }
+  },
+  "Description": "VPC, including a NAT instance, NAT and private subnet security groups, and an internal hosted DNS zone.\n",
+  "Parameters": {
+    "EnableDnsSupport": {
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Default": "true",
+      "Description": "Specifies whether DNS resolution is supported for the VPC"
+    },
+    "EnableDnsHostnames": {
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Default": "true",
+      "Description": "Specifies whether the instances launched in the VPC get DNS hostnames"
+    },
+    "InstanceTenancy": {
+      "Type": "String",
+      "AllowedValues": [
+        "default",
+        "dedicated"
+      ],
+      "Default": "default",
+      "Description": "Dedicated: Any instance launched into the VPC will run on dedicated hardware (increased cost)"
+    },
+    "VpcName": {
+      "Type": "String",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "Default": "gregonaws-demo-us-east-2-vpc",
+      "Description": "Specifies the name of the VPC being created",
+      "ConstraintDescription": "can only contain ASCII characters"
+    },
+    "CidrPrefix": {
+      "Type": "Number",
+      "MinValue": "16",
+      "MaxValue": "31",
+      "Default": "16",
+      "Description": "The prefix of the CIDR block to assign to the VPC (172.X.0.0/16)"
+    },
+    "PrivateHostedZoneName": {
+      "Type": "String",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "Default": "demo.greg",
+      "Description": "A hosted route53 zone",
+      "ConstraintDescription": "can only contain ASCII characters"
+    },
+    "K8sHostedZoneName": {
+      "Type": "String",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "Default": "k8s.gregonaws.net",
+      "Description": "A hosted route53 zone",
+      "ConstraintDescription": "can only contain ASCII characters"
+    }
+  }
+}
