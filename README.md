@@ -12,6 +12,7 @@ If you don't have the aws-sdk-core gem installed, install it with bundler:
 
     bundle install
     
+TODO remove submodule (https://github.com/udacity/ud615)
 This repo contains a git submodule (Thanks to Kelsey Hightower!).  Initialize it:
 
     git submodule update --init
@@ -123,19 +124,61 @@ Kubernetes core components include:
 ### Objects
 
 #### Pods
+**You will likely not manage pods directly.**
+
 A pod is the smallest, simplest unit managed by k8s.  It consists of one or more application containers, a single IP address in its own network namespace, volumes which are shared by all containers in the pod, and options on how to run each container in the pod.
 
 Usually, you will run just one container in a pod.
 
+"In general, users shouldn’t need to create pods directly. They should almost always use controllers (e.g., Deployments), even for singletons." ([source](https://kubernetes.io/docs/concepts/workloads/pods/pod/))
+
+##### Aliveness and readiness tests
+[See here](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes)
+
 #### Secrets
+[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/) can be used in two ways:
+
+- As a volume, which can be mounted by a container in a pod
+- By kubelet, when pulling images for a pod
 
 #### Config maps
 
-#### Replicasets
-
-#### Services
-
 #### Deployments
+The [deployment object](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) is the most common object you will work with on a k8s cluster.
+
+Provides a spec for [replicasets](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/) / [replication controllers](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/), and pods.  
+
+TODO find a sample app to manage during the demo:
+
+  - create a deployment
+  - update the deployment
+  - rollback the deployment
+  - scale the deployment
+  - pause the deployment
+
+#### Jobs
+Jobs control pods that are expected to run once and die.
+
+    cd examples/jobs
+    kubectl create -f ./pi.yaml
+    kubectl describe jobs/pi
+    pods=$(kubectl get pods  --show-all --selector=job-name=pi --output=jsonpath={.items..metadata.name})
+    kubectl logs $pods
+
+#### Cron jobs
+Cron jobs are what they sound like: jobs that run once or repeatedly at a specified time.
+
+    kubectl create -f cronpi.yaml
+    kubectl describe cronjob cronpi
+    for job in $(kubectl get jobs -a --output=jsonpath='{.items..labels..job-name}') ; do \
+     echo $job ;\
+     echo ;\
+     pod=$(kubectl get pods  --show-all --selector=job-name=$job --output=jsonpath={.items..metadata.name}) ;\
+     kubectl logs $pod ;\
+     done  
+     
+#### Daemonsets
+Daemonsets control pods that are supposed to run on every single node, e.g. a monitoring agent, log collector, or clustered storage daemon (e.g. Ceph, glusterFS).
 
 #### Ingresses(?)
 

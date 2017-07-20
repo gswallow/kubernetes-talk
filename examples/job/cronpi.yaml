@@ -1,0 +1,19 @@
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: cronpi
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: pi
+            image: perl
+            args:
+            - "perl"
+            - "-Mbignum=bpi"
+            - "-wle"
+            - "print bpi(2000)"
+          restartPolicy: Never
