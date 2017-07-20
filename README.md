@@ -141,7 +141,10 @@ Usually, you will run just one container in a pod.
 - As a volume, which can be mounted by a container in a pod
 - By kubelet, when pulling images for a pod
 
+Honestly, secrets aren't really that secure.  Then again, nothing in the container age is secure.
+
 #### Config maps
+Config maps are like secrets, except they're not in anyway secret.  You mount a config map like you would mount a volume in a container.
 
 #### Deployments
 The [deployment object](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) is the most common object you will work with on a k8s cluster.
@@ -180,8 +183,62 @@ Cron jobs are what they sound like: jobs that run once or repeatedly at a specif
 #### Daemonsets
 Daemonsets control pods that are supposed to run on every single node, e.g. a monitoring agent, log collector, or clustered storage daemon (e.g. Ceph, glusterFS).
 
-#### Ingresses(?)
+#### Services
+Because pods are ephemeral, their IP addresses may change.  [Services](https://kubernetes.io/docs/concepts/services-networking/service/) tie pods to cluster IPs by the pods' selectors (labels) in one of three modes:
 
-#### Namespaces(??)
+- userspace
+- iptables (layer 4; requires readiness probes for each pod in a deployment to be useful)
+- "ingress" (layer 7)
 
-#### TODO
+Publishing a service is done through:
+
+| Publishing mechanism | How it works |
+|----------------------|--------------|
+|ClusterIP | Exposes the service on a cluster-internal IP.  The service is only reachable from within the cluster. |
+| NodePort | Exposes the service on each node's IP at a static port.  Automatically creates a ClusterIP and forwards TCP traffic through either userspace or IPtables. |
+| LoadBalancer | Magically creates a load balancer using the cloud controller (e.g. an ELB).  Automatically creates a NodePort and a ClusterIP. |
+| ExternalName | Maps the service to a DNS name through a CNAME record.  No proxying is set up. |
+
+##### DNS
+
+NONE of these touch external DNS, which means you have to set up CNAME/Alias records yourself. or use a DNS controller.  We will use the [external-dns](https://github.com/kubernetes-incubator/external-dns) kubernetes-incubator project.
+
+## Demo: guestbook
+
+    cd examples/guestbook
+    kubectl create -f redis-master-deployment.yaml
+    kubectl create -f redis-master-service.yaml
+    kubectl describe deployment redis-master
+    master=$(kubectl get pods --selector=app=redis,role=master --output=jsonpath='{.items..metadata.name}')
+    kubectl logs $master
+    
+    kubectl create -f redis-slave-deployment.yaml
+    kubectl create -f redis-slave-service.yaml
+    kubectl describe deployment redis-slave
+    for slave in $(kubectl get pods --selector=app=redis,role=slave --output=jsonpath='{.items..metadata.name}') ; do \
+     kubectl logs $slave ; \
+     done
+    
+    kubectl logs $master
+    
+    kubectl create -f frontend-deployment.yaml
+    for frontend in $(kubectl get pods --selector=app=guestbook --output=jsonpath='{.items..metadata.name}') ; do \
+     kubectl logs $frontend; \
+     done
+     
+    kubectl create -f frontend-service.yaml
+    
+    kubectl describe service frontend
+    
+Hit the load balancer with your browser.  This is fine and dandy, but having to create ALIAS or CNAME records is sort of annoying.  Let's try this again with the external DNS add-on installed.
+
+    kubectl annotate service frontend "external-dns.alpha.kubernetes.io/hostname=guestbook.$public_domain."
+    cd ../external-dns
+    kubectl create -f external-dns-deployment.yaml
+    
+
+#### TODO A few debugging tricks?
+
+- port forward a pod
+- execute a shell on a pod
+
