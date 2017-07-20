@@ -16,7 +16,7 @@ This repo contains a git submodule (Thanks to Kelsey Hightower!).  Initialize it
 
     git submodule update --init
 
-## Pre-requisites to running your own kubernetes cluster
+## Prerequisites to running your own kubernetes cluster
 We will stand up our own kubernetes cluster using the [kops](https://github.com/kubernetes/kops/)
 tool.  kops requires two or three resources in order to create a fresh kubernetes cluster:
 
@@ -61,7 +61,7 @@ Switch between k8s clusters by using the `kubectl config use-context` command:
     
 ## Launching a cluster
 
-There are two []network topologies](https://github.com/kubernetes/kops/blob/master/docs/topology.md): public and private.  We will launch a private kubernetes cluster, meaning that all of the nodes -- masters and minions -- will be located within private subnets.  This is the most secure way to create your own kubernetes cluster.
+There are two [network topologies](https://github.com/kubernetes/kops/blob/master/docs/topology.md): public and private.  We will launch a private kubernetes cluster, meaning that all of the nodes -- masters and minions -- will be located within private subnets.  Kubernetes will create an ELB that provides access to the API server and a bastion SSH host, if configured.  This is the most secure way to create your own kubernetes cluster.
 
 We will demonstrate how to launch a cluster [within our own VPC](https://github.com/kubernetes/kops/blob/master/docs/run_in_existing_vpc.md).  Currently there's a bug in kops 1.6.x where it ignores the tags it's supposed to use to identify shared subnets, so we'll work around that:
 
@@ -83,12 +83,13 @@ This command will actually provision the resources and bootstrap each node.
 ### Inspect the cluster
 
     kubectl get nodes
+    kubectl describe node <X>
     kubectl -n kube-system get pods
     
 ### Install add-ons
 kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addons.md), which include things like monitoring tools and management dashboards.
 
-## Run a very basic app
+## Run a very basic app (TODO)
 
     kubectl run nginx --image nginx:1.10.0·
     kubectl describe deployments nginx
@@ -100,34 +101,41 @@ kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addo
     kubectl describe deployments nginx
 
 ## Concepts
-#### Kubernetes core components
+### Kubernetes components
 Kubernetes core components include:
 
 | module | location | responsibility |
 |--------|----------|----------------|
-| apiserver | masters | handles kubectl requests<br>communicates with node kubelets, kube-scheduler, kube-controller-manager|
-| kubelet | all | **DOES NOT RUN IN A CONTAINER**<br>starts pods in /etc/kubernetes/manifests<br>|registers itself as a node with the API server<br>sets up the Docker cbr0 bridge interface<br>monitors and restarts pods scheduled by the kube-scheduler|
-| kube-proxy | all | forwards ports through iptables |
-| etcd | masters | stores configuration, secrets, and pod manifests for retrieval by the API server |
+| apiserver | masters | handles kubectl (UI) requests<br>central point of contact for all master services<br>communicates with kubelets, pods (logging, kubectl exec sessions, etc.)|
+| kubelet | all | **DOES NOT RUN IN A CONTAINER**<br>starts pods in /etc/kubernetes/manifests<br>registers itself as a node with the API server<br>sets up the Docker cbr0 bridge interface<br>monitors and restarts pods scheduled by the kube-scheduler|
+| kube-proxy | all | forwards ports for containers through iptables |
+| etcd | masters | stores configuration and secrets for retrieval by the API server |
 | etcd-events | masters | stores k8s cluster event logs |
 | kube-controller-manager | masters | "runs various controllers" |
 | kube-scheduler | masters | schedules pods on nodes |
 | kube-dns | all | sort of like DNSmasq |
 | dns-controller | masters | makes changes to external DNS (e.g. route53) |
+| cloud-controller-manager | masters | creates EBS volumes, adds routes to routing tables, etc. |
 | protokube (kops only) | masters | bootstraps etcd, acts as an installation script / config management system |
 
 *note: I have a shallow understanding of k8s components and I am likely wrong on many counts*
 
+### Objects
+
 #### Pods
-A pod is the atomic unit managed by k8s.  It is a namespace, with a single IP address, a set of volumes, and one or more containers that share the volumes / IP address.
+A pod is the smallest, simplest unit managed by k8s.  It consists of one or more application containers, a single IP address in its own network namespace, volumes which are shared by all containers in the pod, and options on how to run each container in the pod.
+
+Usually, you will run just one container in a pod.
 
 #### Secrets
 
 #### Config maps
 
-#### Deployments
+#### Replicasets
 
 #### Services
+
+#### Deployments
 
 #### Ingresses(?)
 
