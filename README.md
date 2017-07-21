@@ -12,10 +12,6 @@ If you don't have the aws-sdk-core gem installed, install it with bundler:
 
     bundle install
     
-TODO remove submodule (https://github.com/udacity/ud615)
-This repo contains a git submodule (Thanks to Kelsey Hightower!).  Initialize it:
-
-    git submodule update --init
 
 ## Prerequisites to running your own kubernetes cluster
 We will stand up our own kubernetes cluster using the [kops](https://github.com/kubernetes/kops/)
@@ -58,26 +54,31 @@ Then let's tear it down:
 
 Switch between k8s clusters by using the `kubectl config use-context` command: 
 
-    kubectl config use-context k8s.gregonaws.net
+    kubectl config use-context k8s.$public_domain
     
 ## Launching a cluster
 
 There are two [network topologies](https://github.com/kubernetes/kops/blob/master/docs/topology.md): public and private.  We will launch a private kubernetes cluster, meaning that all of the nodes -- masters and minions -- will be located within private subnets.  Kubernetes will create an ELB that provides access to the API server and a bastion SSH host, if configured.  This is the most secure way to create your own kubernetes cluster.
 
-We will demonstrate how to launch a cluster [within our own VPC](https://github.com/kubernetes/kops/blob/master/docs/run_in_existing_vpc.md).  Currently there's a bug in kops 1.6.x where it ignores the tags it's supposed to use to identify shared subnets, so we'll work around that:
+We will demonstrate how to launch a cluster [within our own VPC](https://github.com/kubernetes/kops/blob/master/docs/run_in_existing_vpc.md).  Currently there's a bug in kops 1.6.x where it ignores the tags it's supposed to use to identify shared subnets, so we'll work around that.
 
-    cd k8s && eval $(./kcc.sh)
+Remember to create the NS records delegating k8s.$public_domain to different nameservers:
+
+    bundle exec ./create-ns-records.rb
+    cd ../k8s && eval $(./kcc.sh)
     bundle exec ./get-subnets.rb
 
 Copy the output of `get-subnets.rb`, and then run:
 
-    kops edit cluster k8s.gregonaws.net
+    kops edit cluster k8s.$public_domain
+
+Optionally, add the contents of the "bugfix" file, after "etcdClusters," in the in-memory copy of the cluster maniftest.  This enables an alpha version of the batch API, which is required to run cron jobs.  See [https://github.com/kubernetes/kops/issues/618](https://github.com/kubernetes/kops/issues/618).
 
 Replace the contents of the "subnets" key with the output from `get-subnets.rb`.
 
 `kcc.sh` is simply a wrapper around `kops create cluster`.  The `kops create cluster` command will lay out a cluster in the S3 bucket.  In order to actually create the resources comprising the cluster, we need to run the `kops update cluster` command:
 
-    kops update cluster k8s.gregonaws.net --yes
+    kops update cluster k8s.$public_domain --yes
     
 This command will actually provision the resources and bootstrap each node.
 
@@ -86,20 +87,13 @@ This command will actually provision the resources and bootstrap each node.
     kubectl get nodes
     kubectl describe node <X>
     kubectl -n kube-system get pods
+
+**An interesting troubleshooting tip is to get events:**
+
+    kubectl get events
     
 ### Install add-ons
 kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addons.md), which include things like monitoring tools and management dashboards.
-
-## Run a very basic app (TODO)
-
-    kubectl run nginx --image nginx:1.10.0·
-    kubectl describe deployments nginx
-    kubectl expose deployments nginx --port 80 --type LoadBalancer
-    
-### Scale a deployment
-
-    kubectl scale --replicas=3 deployment/nginx
-    kubectl describe deployments nginx
 
 ## Concepts
 ### Kubernetes components
@@ -151,18 +145,18 @@ The [deployment object](https://kubernetes.io/docs/concepts/workloads/controller
 
 Provides a spec for [replicasets](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/) / [replication controllers](https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller/), and pods.  
 
-TODO find a sample app to manage during the demo:
+Common management tasks include:
 
-  - create a deployment
-  - update the deployment
-  - rollback the deployment
-  - scale the deployment
-  - pause the deployment
+  - creating a deployment
+  - updating the deployment
+  - rolling back the deployment
+  - scaling the deployment
+  - pausing the deployment (putting several fixes in place and pausing updates, or having a bad day)
 
 #### Jobs
 Jobs control pods that are expected to run once and die.
 
-    cd examples/jobs
+    cd ../examples/jobs
     kubectl create -f ./pi.yaml
     kubectl describe jobs/pi
     pods=$(kubectl get pods  --show-all --selector=job-name=pi --output=jsonpath={.items..metadata.name})
@@ -205,7 +199,7 @@ NONE of these touch external DNS, which means you have to set up CNAME/Alias rec
 
 ## Demo: guestbook
 
-    cd examples/guestbook
+    cd ../guestbook
     kubectl create -f redis-master-deployment.yaml
     kubectl create -f redis-master-service.yaml
     kubectl describe deployment redis-master
@@ -230,15 +224,20 @@ NONE of these touch external DNS, which means you have to set up CNAME/Alias rec
     
     kubectl describe service frontend
     
-Hit the load balancer with your browser.  This is fine and dandy, but having to create ALIAS or CNAME records is sort of annoying.  Let's try this again with the external DNS add-on installed.
+Hit the load balancer with your browser.  
 
-    kubectl annotate service frontend "external-dns.alpha.kubernetes.io/hostname=guestbook.$public_domain."
+This is fine and dandy, but having to create ALIAS or CNAME records is sort of annoying.  Let's try this again with the external DNS add-on installed.
+
+    kubectl annotate service frontend "external-dns.alpha.kubernetes.io/hostname=guestbook.k8s.$public_domain."
+    kubectl describe service frontend
     cd ../external-dns
-    kubectl create -f external-dns-deployment.yaml
-    
+    ./dns.sh
+    kubectl describe deployment external-dns
+    dns=$(kubectl get pods --selector=app=external-dns --output=jsonpath='{.items..metadata.name}')
+    kubectl logs $dns
 
 #### TODO A few debugging tricks?
 
 - port forward a pod
 - execute a shell on a pod
-
+- helm charts
