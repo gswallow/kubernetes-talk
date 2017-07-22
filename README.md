@@ -28,7 +28,7 @@ To create these resources, run:
 
     cd cloudformation && ./launch.sh
     
-Once the VPC gets spun up (about three minutes), link your two zones together with an NS record:
+Once the VPC spins up (about three minutes), link your two zones together with an NS record:
 
     cd cloudformation && bundle exec ./create-ns-records.rb
 
@@ -49,13 +49,7 @@ Then let's tear it down:
     minikube stop
     # for fun here, you could restart it but meh
     minikube delete
-
-#### Contexts
-
-Switch between k8s clusters by using the `kubectl config use-context` command: 
-
-    kubectl config use-context k8s.$public_domain
-    
+  
 ## Launching a cluster
 
 There are two [network topologies](https://github.com/kubernetes/kops/blob/master/docs/topology.md): public and private.  We will launch a private kubernetes cluster, meaning that all of the nodes -- masters and minions -- will be located within private subnets.  Kubernetes will create an ELB that provides access to the API server and a bastion SSH host, if configured.  This is the most secure way to create your own kubernetes cluster.
@@ -135,7 +129,9 @@ Usually, you will run just one container in a pod.
 - As a volume, which can be mounted by a container in a pod
 - By kubelet, when pulling images for a pod
 
-Honestly, secrets aren't really that secure.  Then again, nothing in the container age is secure.
+Honestly, secrets aren't really that secure.
+
+TODO demonstrate creating a secret with a cert.
 
 #### Config maps
 Config maps are like secrets, except they're not in anyway secret.  You mount a config map like you would mount a volume in a container.
@@ -177,7 +173,7 @@ Cron jobs are what they sound like: jobs that run once or repeatedly at a specif
 #### Daemonsets
 Daemonsets control pods that are supposed to run on every single node, e.g. a monitoring agent, log collector, or clustered storage daemon (e.g. Ceph, glusterFS).
 
-#### Services
+#### Services
 Because pods are ephemeral, their IP addresses may change.  [Services](https://kubernetes.io/docs/concepts/services-networking/service/) tie pods to cluster IPs by the pods' selectors (labels) in one of three modes:
 
 - userspace
@@ -236,8 +232,25 @@ This is fine and dandy, but having to create ALIAS or CNAME records is sort of a
     dns=$(kubectl get pods --selector=app=external-dns --output=jsonpath='{.items..metadata.name}')
     kubectl logs $dns
 
-#### TODO A few debugging tricks?
 
-- port forward a pod
-- execute a shell on a pod
-- helm charts
+## Demo: ingresses (maybe)
+
+We will use the [ALB ingress controller](https://github.com/coreos/alb-ingress-controller) (NO WE WON'T!  SCRATCH THAT!)
+
+
+We will use [traefik](https://docs.traefik.io/) which is a layer-7 replacement for exposing a service through an ELB.  The ALB ingress controller creates route53 records for us, so we can remove the external DNS controller.
+
+Maybe I won't show this.  Stay tuned.
+
+    kubectl delete deployment external-dns
+    kubectl create -f https://raw.githubusercontent.com/coreos/alb-ingress-controller/master/examples/default-backend.yaml
+    kubectl create -f https://raw.githubusercontent.com/coreos/alb-ingress-controller/master/examples/alb-ingress-controller.yaml
+
+  
+## Where next?
+There's a lot to check out, but here's where I'm going next:
+
+- RBAC for Kubernetes 1.6+
+- [Helm](https://helm.sh/) is a tool you can use to just deploy [apps](https://kubeapps.com/)
+- Multiple ingresses including the nginx, haproxy, and AWS ALB ingress controllers
+- 
