@@ -3,6 +3,7 @@ cat > external-dns-deployment.yaml <<EOF
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
+  namespace: kube-system
   name: external-dns
 spec:
   strategy:

@@ -131,11 +131,20 @@ Usually, you will run just one container in a pod.
 
 Honestly, secrets aren't really that secure.
 
-TODO demonstrate creating a secret with a cert.
-
 #### Config maps
-Config maps are like secrets, except they're not in anyway secret.  You mount a config map like you would mount a volume in a container.
+Config maps are like secrets, except they're not in anyway secret.  You mount a config map like you would mount a volume in a container.  See the ingress demo for an example.
 
+    cd ../examples/secrets
+    ./create-tls-secret.sh
+    kubectl create secret generic tls-demo --from-file=tls/
+    kubectl describe secret tls-demo
+    
+    kubectl create configmap configmap-demo --from-file=nginx/proxy.conf
+    kubectl describe configmap configmap-demo
+    
+    kubectl exec tls-demo ls /etc/tls
+    kubectl exec tls-demo cat /etc/nginx/conf.d/proxy.conf
+    
 #### Deployments
 The [deployment object](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) is the most common object you will work with on a k8s cluster.
 
@@ -222,35 +231,63 @@ NONE of these touch external DNS, which means you have to set up CNAME/Alias rec
     
 Hit the load balancer with your browser.  
 
-This is fine and dandy, but having to create ALIAS or CNAME records is sort of annoying.  Let's try this again with the external DNS add-on installed.
+This is fine and dandy, but having to create ALIAS or CNAME records is sort of annoying.  Let's try this again with the external DNS add-on installed.  Note that the external-dns service gets deployed into the kube-system namespace, which pushes it onto the masters:
 
     kubectl annotate service frontend "external-dns.alpha.kubernetes.io/hostname=guestbook.k8s.$public_domain."
     kubectl describe service frontend
     cd ../external-dns
     ./dns.sh
-    kubectl describe deployment external-dns
-    dns=$(kubectl get pods --selector=app=external-dns --output=jsonpath='{.items..metadata.name}')
-    kubectl logs $dns
+    kubectl describe deployment external-dns -n kube-system
+    dns=$(kubectl get pods --selector=app=external-dns -n kube-system --output=jsonpath='{.items..metadata.name}')
+    kubectl logs $dns -n kube-system
 
 
-## Demo: ingresses (maybe)
+## Demo: ingress
 
-We will use the [ALB ingress controller](https://github.com/coreos/alb-ingress-controller) (NO WE WON'T!  SCRATCH THAT!)
+Ingresses can be used to terminate SSL, provide name-based virtual hosts, as highly available load balancers, etc.  There are a few ingresses available:
 
+- GCE
+- Amazon ALB: provides external DNS and ALB support
+- nginx
+- traefik
 
-We will use [traefik](https://docs.traefik.io/) which is a layer-7 replacement for exposing a service through an ELB.  The ALB ingress controller creates route53 records for us, so we can remove the external DNS controller.
+Ingress controllers scan the API server for ingresses with a specific annotation: kubernetes.io/ingress.class.
 
-Maybe I won't show this.  Stay tuned.
+In this example, we will configure the nginx ingress controller, mostly because it's the only one I could get to work:
 
-    kubectl delete deployment external-dns
-    kubectl create -f https://raw.githubusercontent.com/coreos/alb-ingress-controller/master/examples/default-backend.yaml
-    kubectl create -f https://raw.githubusercontent.com/coreos/alb-ingress-controller/master/examples/alb-ingress-controller.yaml
+    cd ../ingress
+    ./2048.sh
+    
+    kubectl describe deployment play2048-deployment
+    kubectl describe service play2048-service
+    kubectl describe ingress play2048-ingress
+    
+    kubectl edit ingress play2048-ingress
 
+Once again, we will deploy controllers to the kube-system namespace:
+
+    ./nginx-ingress-controller.sh
+    
+    kubectl describe configmap ingress-nginx -n kube-system
+    kubectl describe deployment ingress-nginx -n kube-system
+    kubectl describe service ingress-nginx -n kube-system
+    
+Keep an eye on the external DNS controller:
+
+    kubectl logs $dns -n kube-system
+    
+Check out the nginx ingress controllers' logs:
+
+    pods=$(kubectl get pods --selector=app=ingress-nginx -n kube-system --output=jsonpath='{.items..metadata.name}')
+    for pod in $pods; do kubectl logs $pod -n kube-system ; done
+        
+    kubectl port-forward ${pods% *} 18080:18080 -n kube-system
+
+Point your browser to http://localhost:18080/nginx_status.
   
 ## Where next?
 There's a lot to check out, but here's where I'm going next:
 
 - RBAC for Kubernetes 1.6+
-- [Helm](https://helm.sh/) is a tool you can use to just deploy [apps](https://kubeapps.com/)
-- Multiple ingresses including the nginx, haproxy, and AWS ALB ingress controllers
-- 
+- [Helm](https://helm.sh/) is a tool you can use to just deploy [apps](https://kubeapps.com/).
+
