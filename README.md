@@ -86,6 +86,10 @@ This command will actually provision the resources and bootstrap each node.
 
     kubectl get events
     
+In desperation, you can ssh into the bastion:
+
+    ssh -A admin@basion.k8s.$public_domain
+    
 ### Install add-ons
 kops supports [add-ons](https://github.com/kubernetes/kops/blob/master/docs/addons.md), which include things like monitoring tools and management dashboards.
 
@@ -250,6 +254,7 @@ Ingresses can be used to terminate SSL, provide name-based virtual hosts, as hig
 - Amazon ALB: provides external DNS and ALB support
 - nginx
 - traefik
+- haproxy
 
 Ingress controllers scan the API server for ingresses with a specific annotation: kubernetes.io/ingress.class.
 
@@ -284,10 +289,47 @@ Check out the nginx ingress controllers' logs:
     kubectl port-forward ${pods% *} 18080:18080 -n kube-system
 
 Point your browser to http://localhost:18080/nginx_status.
-  
+
+
+## I'm bored / scope creep / if we have time
+ECS, Kubernetes, etc. offer support for [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).  You can use this to kill EC2 instances that, prior, would have been bad candidates for containerization.  Examples include small couchbase servers, RabbitMQ servers, small database servers.
+
+I wouldn't put my faith in hosting a large database on an application container volume; persistent or not.
+
+We will deploy the [AWS EFS](https://github.com/kubernetes-incubator/external-storage/tree/master/aws/efs) external storage provisioner, which automatically provides persistent volumes on demand to pods through a storage class.
+
+First, we'll create an EFS filesystem in the same AWS region as our Kubernetes cluster.  When we create the EFS filesystem, we will need to add the master and node security groups to the filesystem's white list.  Note, also, the mounting instructions to access your new EFS filesystem.
+
+Next, we will ssh into the bastion host and create a directory to use as an export:
+
+    kubectl get nodes --show-labels | grep 'role=node' | awk '{print $1}'
+    ssh -A admin@bastion.k8s.$public_domain
+    ssh <pick a node>
+    mkdir efs
+    sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 FS:/ efs
+    sudo mkdir efs/k8s
+    sudo umount efs
+    
+Next, we will create the EFS provisioner:
+
+    cd examples/volumes
+    ./deploy.sh
+    kubectl describe configmap efs-provisioner
+    kubectl describe deployment efs-provisioner
+
+And we'll create an EFS consumer:
+
+    kubectl create -f pod.yaml
+    kubectl describe persistentvolumeclaim efs
+    kubectl describe pod efs-consumer
+    kubectl exec efs-consumer ls /mnt
+    kubectl exec efs-consumer -- df -h /mnt
+           
 ## Where next?
 There's a lot to check out, but here's where I'm going next:
 
 - RBAC for Kubernetes 1.6+
+  - Can I restrict groups of developers/QA analysts to separate namespaces?
 - [Helm](https://helm.sh/) is a tool you can use to just deploy [apps](https://kubeapps.com/).
+- Auto-scaling!
 
