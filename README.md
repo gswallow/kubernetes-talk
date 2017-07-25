@@ -332,4 +332,4 @@ There's a lot to check out, but here's where I'm going next:
   - Can I restrict groups of developers/QA analysts to separate namespaces?
 - [Helm](https://helm.sh/) is a tool you can use to just deploy [apps](https://kubeapps.com/).
 - Auto-scaling!
-
+- Telepresence (thanks Patrick!)
