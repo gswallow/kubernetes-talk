@@ -9,11 +9,13 @@ export NODE_SIZE=${NODE_SIZE:-t2.large}
 export NODE_VOLUME_SIZE=${NODE_VOLUME_SIZE:-20}
 export MASTER_SIZE=${MASTER_SIZE:-t2.small}
 export MASTER_VOLUME_SIZE=${MASTER_VOLUME_SIZE:-20}
-export K8S_VERSION=${K8S_VERSION:=1.6.4}
+export K8S_VERSION=${K8S_VERSION:=1.7.3}
 export KOPS_STATE_STORE=s3://${org}-${environment}-kops-state-store
 export SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-~/.ssh/id_rsa.pub}
 
-echo kops create cluster $DNS_ZONE \
+kops create cluster $DNS_ZONE \
+ --cloud=aws \
+ --cloud-labels="Environment=${environment}" \
  --zones="$ZONES" \
  --master-zones="$ZONES"\
  --vpc="$VPC" \
