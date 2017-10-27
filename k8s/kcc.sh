@@ -9,7 +9,7 @@ export NODE_SIZE=${NODE_SIZE:-t2.large}
 export NODE_VOLUME_SIZE=${NODE_VOLUME_SIZE:-20}
 export MASTER_SIZE=${MASTER_SIZE:-t2.small}
 export MASTER_VOLUME_SIZE=${MASTER_VOLUME_SIZE:-20}
-export K8S_VERSION=${K8S_VERSION:=1.7.3}
+export K8S_VERSION=${K8S_VERSION:=1.7.5}
 export KOPS_STATE_STORE=s3://${org}-${environment}-kops-state-store
 export SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-~/.ssh/id_rsa.pub}
 
@@ -29,6 +29,6 @@ kops create cluster $DNS_ZONE \
  --dns-zone="$DNS_ZONE" \
  --ssh-public-key="$SSH_PUBLIC_KEY" \
  --topology=private \
- --networking=calico \
+ --networking=weave \
  --bastion="true" \
  --api-loadbalancer-type=public
